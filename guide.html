@@ -1,0 +1,1414 @@
+<title>Media Stack Runbook — media-stack</title>
+
+<style>
+  /* ============ tokens ============ */
+  :root {
+    --ground:      #eef1f4;
+    --surface:     #ffffff;
+    --surface-2:   #e4e9ee;
+    --line:        #cfd7de;
+    --line-soft:   #dde3e9;
+    --ink:         #141a20;
+    --ink-2:       #3d4a55;
+    --ink-3:       #6b7883;
+    --accent:      #0b6f7d;
+    --accent-ink:  #084f59;
+    --accent-wash: #d9ecef;
+    --danger:      #a8232b;
+    --danger-wash: #f7dfe0;
+    --warn:        #8a5a06;
+    --warn-wash:   #f8ead2;
+    --ok:          #2b6b45;
+    --ok-wash:     #dcece2;
+    --code-bg:     #182028;
+    --code-ink:    #d5dde4;
+    --code-dim:    #7d8b98;
+
+    --f-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --f-body:    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --f-mono:    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+    --step: clamp(1.6rem, 1.1rem + 1.6vw, 2.4rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:      #10151a;
+      --surface:     #171e25;
+      --surface-2:   #1f2831;
+      --line:        #2e3a45;
+      --line-soft:   #232d36;
+      --ink:         #e6ecf1;
+      --ink-2:       #b3c0cb;
+      --ink-3:       #7e8d99;
+      --accent:      #46c2d3;
+      --accent-ink:  #8fdde9;
+      --accent-wash: #12323a;
+      --danger:      #f08d92;
+      --danger-wash: #3a1d20;
+      --warn:        #e6b45c;
+      --warn-wash:   #35280f;
+      --ok:          #74c795;
+      --ok-wash:     #16301f;
+      --code-bg:     #0b1116;
+      --code-ink:    #cdd7df;
+      --code-dim:    #6b7b88;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #10151a; --surface: #171e25; --surface-2: #1f2831;
+    --line: #2e3a45; --line-soft: #232d36;
+    --ink: #e6ecf1; --ink-2: #b3c0cb; --ink-3: #7e8d99;
+    --accent: #46c2d3; --accent-ink: #8fdde9; --accent-wash: #12323a;
+    --danger: #f08d92; --danger-wash: #3a1d20;
+    --warn: #e6b45c; --warn-wash: #35280f;
+    --ok: #74c795; --ok-wash: #16301f;
+    --code-bg: #0b1116; --code-ink: #cdd7df; --code-dim: #6b7b88;
+  }
+  :root[data-theme="light"] {
+    --ground: #eef1f4; --surface: #ffffff; --surface-2: #e4e9ee;
+    --line: #cfd7de; --line-soft: #dde3e9;
+    --ink: #141a20; --ink-2: #3d4a55; --ink-3: #6b7883;
+    --accent: #0b6f7d; --accent-ink: #084f59; --accent-wash: #d9ecef;
+    --danger: #a8232b; --danger-wash: #f7dfe0;
+    --warn: #8a5a06; --warn-wash: #f8ead2;
+    --ok: #2b6b45; --ok-wash: #dcece2;
+    --code-bg: #182028; --code-ink: #d5dde4; --code-dim: #7d8b98;
+  }
+
+  /* ============ base ============ */
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  p { max-width: 68ch; }
+  li { max-width: 66ch; }
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px;
+  }
+  strong { font-weight: 650; color: var(--ink); }
+
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 clamp(1rem, 4vw, 2.5rem) 6rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 3.5rem;
+  }
+  @media (min-width: 1000px) {
+    .shell { grid-template-columns: 210px minmax(0, 1fr); }
+  }
+
+  /* ============ masthead ============ */
+  .masthead {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--line);
+    padding: clamp(2.5rem, 6vw, 4.5rem) 0 1.75rem;
+    margin-bottom: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: .72rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem .9rem;
+    align-items: center;
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  h1 {
+    font-family: var(--f-display);
+    font-size: clamp(2.1rem, 1.2rem + 3.6vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -.028em;
+    line-height: 1.04;
+    text-wrap: balance;
+    margin: 0;
+  }
+  .standfirst { font-size: 1.06rem; color: var(--ink-2); max-width: 60ch; margin: 0; }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    margin-top: .6rem;
+  }
+  .fact { background: var(--surface); padding: .8rem .95rem; display: flex; flex-direction: column; gap: .18rem; }
+  .fact dt {
+    font-family: var(--f-mono); font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .fact dd { margin: 0; font-family: var(--f-mono); font-size: .92rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ============ rail ============ */
+  .rail { display: none; }
+  @media (min-width: 1000px) {
+    .rail {
+      display: block;
+      position: sticky;
+      top: 2rem;
+      align-self: start;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      padding-bottom: 2rem;
+    }
+  }
+  .rail h2 {
+    font-family: var(--f-mono); font-size: .68rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3); margin: 0 0 .8rem;
+    font-weight: 500;
+  }
+  .rail ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .1rem; }
+  .rail a {
+    display: flex; gap: .55rem; align-items: baseline;
+    padding: .28rem .4rem .28rem .1rem;
+    font-size: .84rem; color: var(--ink-2); text-decoration: none;
+    border-left: 2px solid transparent;
+    padding-left: .55rem;
+    line-height: 1.35;
+  }
+  .rail a:hover { color: var(--accent-ink); border-left-color: var(--line); }
+  .rail a .n { font-family: var(--f-mono); font-size: .74rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .rail .prog {
+    margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid var(--line-soft);
+    font-family: var(--f-mono); font-size: .74rem; color: var(--ink-3);
+  }
+  .rail .prog b { color: var(--accent-ink); font-weight: 600; }
+  .bar { height: 3px; background: var(--surface-2); margin-top: .45rem; overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .3s ease; }
+  @media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
+
+  /* ============ content flow ============ */
+  main { min-width: 0; display: flex; flex-direction: column; gap: 3.25rem; }
+
+  section { scroll-margin-top: 1.5rem; }
+  .sec-head { display: flex; gap: 1rem; align-items: baseline; margin-bottom: 1.1rem; }
+  .sec-num {
+    font-family: var(--f-mono);
+    font-size: var(--step);
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+  h2.sec-title {
+    font-family: var(--f-display);
+    font-size: clamp(1.32rem, 1.05rem + .9vw, 1.72rem);
+    font-weight: 720;
+    letter-spacing: -.018em;
+    line-height: 1.15;
+    text-wrap: balance;
+    margin: 0;
+  }
+  .sec-body { border-left: 1px solid var(--line-soft); padding-left: clamp(1rem, 3vw, 1.9rem); margin-left: .35rem; }
+  @media (max-width: 560px) { .sec-body { border-left: 0; padding-left: 0; margin-left: 0; } }
+
+  h3 {
+    font-family: var(--f-display); font-size: 1.02rem; font-weight: 680;
+    letter-spacing: -.005em; margin: 2rem 0 .55rem;
+  }
+  h3:first-child { margin-top: 0; }
+  .sec-body > :first-child { margin-top: 0; }
+  p { margin: 0 0 .95rem; }
+  ul, ol.plain { margin: 0 0 1rem; padding-left: 1.15rem; }
+  ul li, ol.plain li { margin-bottom: .38rem; }
+
+  /* ============ inline atoms ============ */
+  code:not(pre code) {
+    font-family: var(--f-mono); font-size: .875em;
+    background: var(--surface-2); color: var(--ink);
+    padding: .1em .38em; border-radius: 3px;
+    border: 1px solid var(--line-soft);
+    word-break: break-word;
+  }
+  .port {
+    font-family: var(--f-mono); font-size: .8em; font-weight: 600;
+    background: var(--accent-wash); color: var(--accent-ink);
+    border: 1px solid transparent; padding: .12em .45em; border-radius: 3px;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  /* ============ code blocks ============ */
+  .code {
+    position: relative; margin: 0 0 1.15rem;
+    background: var(--code-bg); border: 1px solid var(--line-soft);
+    border-radius: 4px; overflow: hidden;
+  }
+  .code-top {
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    padding: .42rem .6rem .42rem .85rem;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  .code-label {
+    font-family: var(--f-mono); font-size: .67rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--code-dim);
+  }
+  .copy {
+    font-family: var(--f-mono); font-size: .68rem; letter-spacing: .06em;
+    background: transparent; color: var(--code-dim);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 3px;
+    padding: .2rem .5rem; cursor: pointer; text-transform: uppercase;
+  }
+  .copy:hover { color: var(--code-ink); border-color: rgba(255,255,255,.3); }
+  .copy[data-done="1"] { color: var(--ok); border-color: currentColor; }
+  .code pre {
+    margin: 0; padding: .85rem; overflow-x: auto;
+    font-family: var(--f-mono); font-size: .84rem; line-height: 1.62;
+    color: var(--code-ink); tab-size: 2;
+  }
+  .code pre .c { color: var(--code-dim); }
+  .code pre .p { color: #6fbfc9; }
+
+  /* ============ callouts ============ */
+  .note {
+    border: 1px solid var(--line-soft); border-left-width: 3px;
+    padding: .8rem 1rem; margin: 0 0 1.15rem;
+    background: var(--surface); font-size: .95rem;
+  }
+  .note > :last-child { margin-bottom: 0; }
+  .note p { max-width: 62ch; }
+  .note-k {
+    font-family: var(--f-mono); font-size: .67rem; letter-spacing: .13em;
+    text-transform: uppercase; display: block; margin-bottom: .3rem; font-weight: 600;
+  }
+  .note.stop { border-left-color: var(--danger); background: var(--danger-wash); }
+  .note.stop .note-k { color: var(--danger); }
+  .note.care { border-left-color: var(--warn); background: var(--warn-wash); }
+  .note.care .note-k { color: var(--warn); }
+  .note.why { border-left-color: var(--accent); background: var(--accent-wash); }
+  .note.why .note-k { color: var(--accent-ink); }
+  .note.good { border-left-color: var(--ok); background: var(--ok-wash); }
+  .note.good .note-k { color: var(--ok); }
+
+  /* ============ checklist ============ */
+  .check { list-style: none; padding: 0; margin: 0 0 1.15rem; display: flex; flex-direction: column; }
+  .check li { margin: 0; border-bottom: 1px solid var(--line-soft); max-width: none; }
+  .check li:first-child { border-top: 1px solid var(--line-soft); }
+  .check label {
+    display: flex; gap: .7rem; align-items: flex-start;
+    padding: .6rem .2rem; cursor: pointer; font-size: .95rem;
+  }
+  .check input { margin: .38em 0 0; accent-color: var(--accent); flex: none; width: 15px; height: 15px; cursor: pointer; }
+  .check .txt { max-width: 62ch; }
+  .check input:checked ~ .txt { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--line); }
+
+  /* ============ tables ============ */
+  .tw { overflow-x: auto; margin: 0 0 1.15rem; border: 1px solid var(--line-soft); }
+  table { border-collapse: collapse; width: 100%; font-size: .89rem; background: var(--surface); }
+  th, td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th {
+    font-family: var(--f-mono); font-size: .67rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); font-weight: 500;
+    background: var(--surface-2); white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.m { font-family: var(--f-mono); font-size: .84rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ============ pipeline diagram ============ */
+  .pipe {
+    display: flex; flex-wrap: wrap; align-items: stretch; gap: .4rem;
+    margin: 0 0 1.3rem; padding: 1.1rem; background: var(--surface);
+    border: 1px solid var(--line-soft);
+  }
+  .node {
+    flex: 1 1 108px; min-width: 108px;
+    border: 1px solid var(--line); background: var(--ground);
+    padding: .55rem .6rem; display: flex; flex-direction: column; gap: .18rem;
+  }
+  .node b { font-size: .84rem; font-weight: 650; letter-spacing: -.005em; }
+  .node span { font-family: var(--f-mono); font-size: .68rem; color: var(--ink-3); line-height: 1.35; }
+  .node.hl { border-color: var(--accent); background: var(--accent-wash); }
+  .arrow {
+    flex: 0 0 auto; align-self: center; color: var(--ink-3);
+    font-family: var(--f-mono); font-size: .9rem;
+  }
+
+  hr.rule { border: 0; border-top: 1px solid var(--line); margin: 0; }
+  footer {
+    grid-column: 1 / -1; margin-top: 4rem; padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--f-mono); font-size: .74rem; color: var(--ink-3);
+    display: flex; flex-wrap: wrap; gap: .5rem 1.5rem;
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="eyebrow">
+      <span class="dot"></span>
+      <span>media-stack</span>
+      <span>·</span>
+      <span>docker + portainer</span>
+      <span>·</span>
+      <span>rev 2026-07-31</span>
+    </div>
+    <h1>Media stack runbook</h1>
+    <p class="standfirst">
+      Discover, download, organise and stream — eleven containers on one box. Written against
+      the hardware actually in this machine, in the order the steps have to happen.
+    </p>
+    <dl class="facts">
+      <div class="fact"><dt>Library disk</dt><dd>/dev/sdb2 · NTFS</dd></div>
+      <div class="fact"><dt>Free space</dt><dd>1.2 TB of 1.8 TB</dd></div>
+      <div class="fact"><dt>Mount target</dt><dd>/mnt/disco</dd></div>
+      <div class="fact"><dt>Server IP</dt><dd>192.0.2.10</dd></div>
+      <div class="fact"><dt>Transcoder</dt><dd>Intel HD 520</dd></div>
+      <div class="fact"><dt>Run as</dt><dd>uid/gid 1000</dd></div>
+    </dl>
+  </header>
+
+  <nav class="rail" aria-label="Steps">
+    <h2>Steps</h2>
+    <ol>
+      <li><a href="#s0"><span class="n">00</span> How it fits together</a></li>
+      <li><a href="#s1"><span class="n">01</span> Mount the disk</a></li>
+      <li><a href="#s2"><span class="n">02</span> Folder layout</a></li>
+      <li><a href="#s3"><span class="n">03</span> Deploy the stack</a></li>
+      <li><a href="#s4"><span class="n">04</span> qBittorrent</a></li>
+      <li><a href="#s5"><span class="n">05</span> Prowlarr</a></li>
+      <li><a href="#s6"><span class="n">06</span> Sonarr &amp; Radarr</a></li>
+      <li><a href="#s7"><span class="n">07</span> Jellyfin</a></li>
+      <li><a href="#s8"><span class="n">08</span> Bazarr</a></li>
+      <li><a href="#s9"><span class="n">09</span> Jellyseerr</a></li>
+      <li><a href="#s10"><span class="n">10</span> Music stack</a></li>
+      <li><a href="#s11"><span class="n">11</span> End-to-end test</a></li>
+      <li><a href="#ref">— Reference</a></li>
+      <li><a href="#trouble">— Troubleshooting</a></li>
+      <li><a href="#vpn">— VPN wiring</a></li>
+    </ol>
+    <div class="prog">
+      <b id="pdone">0</b> / <span id="ptotal">0</span> checks
+      <div class="bar"><span id="pbar"></span></div>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ================= 00 ================= -->
+    <section id="s0">
+      <div class="sec-head"><span class="sec-num">00</span><h2 class="sec-title">How it fits together</h2></div>
+      <div class="sec-body">
+        <p>
+          Each container does exactly one job and hands off to the next. Configure them in this
+          order, because every service needs the one before it to already be answering.
+        </p>
+        <div class="pipe">
+          <div class="node hl"><b>Jellyseerr</b><span>5055<br>you ask for a film</span></div>
+          <div class="arrow">→</div>
+          <div class="node"><b>Sonarr / Radarr</b><span>8989 · 7878<br>decides what to get</span></div>
+          <div class="arrow">→</div>
+          <div class="node"><b>Prowlarr</b><span>9696<br>searches indexers</span></div>
+          <div class="arrow">→</div>
+          <div class="node"><b>qBittorrent</b><span>8085 · vía gluetun<br>downloads it</span></div>
+          <div class="arrow">→</div>
+          <div class="node"><b>Sonarr / Radarr</b><span>hardlinks into<br>the library</span></div>
+          <div class="arrow">→</div>
+          <div class="node hl"><b>Jellyfin</b><span>8096<br>you watch it</span></div>
+        </div>
+        <p>
+          Bazarr sits off to the side, watching the finished library and fetching subtitles.
+          FlareSolverr sits behind Prowlarr, solving Cloudflare challenges on indexers that use them.
+          Gluetun wraps qBittorrent alone — it's the only container whose traffic leaves through
+          NordVPN, so streaming and the web UIs stay on your LAN at full speed.
+        </p>
+        <p>
+          Music runs as a parallel lane with the same bones: <strong>Lidarr</strong> is Sonarr/Radarr
+          for albums, <strong>Navidrome</strong> streams them, and <strong>Mixarr</strong> is the
+          discovery layer that feeds Lidarr from Spotify, TIDAL, Last.fm and the rest. Everything
+          reuses Prowlarr and the qBittorrent + gluetun tunnel already in the stack.
+        </p>
+        <div class="note why">
+          <span class="note-k">The one idea that matters</span>
+          <p>
+            Downloads and the library live on the <strong>same filesystem, under one bind mount</strong>.
+            That lets Sonarr and Radarr <em>hardlink</em> a finished download into the library instead
+            of copying it: instant, and it costs zero extra disk while the torrent keeps seeding.
+            Almost every "why is my disk full" and "why does importing take 20 minutes" post
+            traces back to breaking this rule.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 01 ================= -->
+    <section id="s1">
+      <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Give the disk a permanent mount</h2></div>
+      <div class="sec-body">
+        <p>
+          Right now the drive lands at <code>/media/&lt;user&gt;/&lt;LABEL&gt;</code>, mounted by your
+          desktop session when you log in. That path is wrong for Docker on two counts: it contains
+          a space, and it does not exist until a graphical login happens.
+        </p>
+        <div class="note stop">
+          <span class="note-k">Why this is step one</span>
+          <p>
+            If Docker starts before that mount appears, every container happily creates its folders
+            at the empty path and writes to your <strong>128 GB system SSD</strong> instead. You
+            find out when the root filesystem fills and the whole machine falls over. An
+            <code>/etc/fstab</code> entry mounts the disk at boot, long before Docker.
+          </p>
+        </div>
+        <p>The drive is internal SATA (a Seagate ST2000LM007), so a permanent mount is simply correct — nothing here is hot-swapped.</p>
+
+        <h3>Run the prep script</h3>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal · needs sudo</span><button class="copy" type="button">Copy</button></div>
+<pre>lsblk -f   <span class="c"># copy the UUID of the library disk (e.g. /dev/sdb2)</span>
+sudo DISK_UUID=&lt;disk-uuid&gt; MOUNT_POINT=/mnt/disco bash ~/media-stack/setup-host.sh</pre>
+        </div>
+        <p>It backs up <code>/etc/fstab</code> first, then writes this line:</p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">/etc/fstab</span><button class="copy" type="button">Copy</button></div>
+<pre>UUID=&lt;disk-uuid&gt;  /mnt/disco  ntfs3  defaults,nofail,noatime,uid=1000,gid=1000,umask=002,windows_names,x-systemd.device-timeout=10  0  0</pre>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Option</th><th>What it buys you</th></tr></thead>
+            <tbody>
+              <tr><td class="m">UUID=…</td><td>Survives the disk being redetected as <code>sdc</code> after a reboot.</td></tr>
+              <tr><td class="m">nofail</td><td>A missing disk doesn't drop the whole boot into emergency mode.</td></tr>
+              <tr><td class="m">uid=1000,gid=1000</td><td>NTFS has no Unix permissions, so they're synthesised at mount time. Matches <code>PUID</code>/<code>PGID</code> in the stack.</td></tr>
+              <tr><td class="m">umask=002</td><td>Directories 775, files 664 — group-writable, so every container can import.</td></tr>
+              <tr><td class="m">windows_names</td><td>Rejects filenames NTFS can't represent, so you fail loudly at creation instead of getting silent corruption later.</td></tr>
+              <tr><td class="m">noatime</td><td>No pointless write on every read. Meaningful on a spinning 5400 rpm drive.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note care">
+          <span class="note-k">The immutable-mountpoint trick</span>
+          <p>
+            The script runs <code>chattr +i /mnt/disco</code> on the empty directory before mounting.
+            While the disk <em>is</em> mounted this does nothing. If the disk ever fails to mount,
+            the bare directory underneath is read-only and containers error out immediately —
+            loud failure instead of quietly filling your SSD. Keep it.
+          </p>
+        </div>
+
+        <h3>Verify before going further</h3>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal</span><button class="copy" type="button">Copy</button></div>
+<pre>findmnt /mnt/disco
+df -h /mnt/disco</pre>
+        </div>
+        <p>You want to see <code>/dev/sdb2</code> and roughly <strong>1.2T available</strong>. If you don't, stop here — nothing downstream will work.</p>
+
+        <div class="note care">
+          <span class="note-k">Side effect</span>
+          <p>The drive stops appearing in your file manager's sidebar and lives at <code>/mnt/disco</code>. Any desktop bookmark pointing at the old <code>/media/…</code> path breaks.</p>
+        </div>
+
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt"><code>findmnt /mnt/disco</code> shows <code>/dev/sdb2</code></span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Free space reads ~1.2T, and your existing files are still there</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Rebooted once and confirmed the mount comes back on its own</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 02 ================= -->
+    <section id="s2">
+      <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Folder layout</h2></div>
+      <div class="sec-body">
+        <p>The script creates this. It is not arbitrary — the shape is what makes hardlinks possible.</p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">on the library disk</span><button class="copy" type="button">Copy</button></div>
+<pre>/mnt/disco/data/
+├── torrents/          <span class="c"># qBittorrent writes here, keeps seeding here</span>
+│   ├── movies/
+│   ├── tv/
+│   └── music/
+└── media/             <span class="c"># Jellyfin / Navidrome read here</span>
+    ├── movies/
+    ├── tv/
+    └── music/</pre>
+        </div>
+        <p>
+          Every container that touches files mounts the single parent <code>/mnt/disco/data</code>
+          as <code>/data</code>. Both subtrees are therefore one filesystem <em>as the container sees it</em>,
+          and hardlinking works.
+        </p>
+        <div class="note stop">
+          <span class="note-k">Do not do this</span>
+          <p>
+            Mounting <code>…/torrents:/downloads</code> and <code>…/media:/media</code> as two separate
+            binds is the classic mistake. Docker presents them as different devices, so Sonarr falls
+            back to a full byte-for-byte copy — slow, and it doubles your disk usage for every file
+            you seed.
+          </p>
+        </div>
+        <p>Config databases go on the SSD at <code>/opt/appdata/…</code>, deliberately <em>not</em> on the NTFS disk. SQLite needs POSIX locking that NTFS doesn't provide properly; putting the <code>.db</code> files there corrupts them eventually.</p>
+        <p>I already confirmed hardlinks work on your NTFS volume, so the layout is sound as-is.</p>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt"><code>ls /mnt/disco/data</code> shows <code>media</code> and <code>torrents</code></span></label></li>
+          <li><label><input type="checkbox"><span class="txt"><code>ls -la /opt/appdata</code> shows the ten folders owned by <code>1000:1000</code></span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 03 ================= -->
+    <section id="s3">
+      <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Deploy the stack in Portainer</h2></div>
+      <div class="sec-body">
+        <ol class="plain">
+          <li>Portainer → <strong>Stacks</strong> → <strong>Add stack</strong>.</li>
+          <li>Name it <code>media</code>.</li>
+          <li>Build method <strong>Web editor</strong>, and paste the contents of <code>~/media-stack/docker-compose.yml</code>.</li>
+          <li>
+            Under <strong>Environment variables</strong>, set the host details the compose
+            interpolates: <code>SERVER_IP</code> (this machine's LAN IP), <code>LAN_SUBNET</code>
+            (e.g. <code>192.0.2.0/24</code>) and <code>DATA_DIR</code> (e.g.
+            <code>/mnt/disco/data</code>). Deploying with <code>docker compose</code> from a
+            terminal instead? Copy <code>.env.example</code> to <code>.env</code> and fill it in
+            there — Portainer ignores <code>.env</code>.
+          </li>
+          <li>
+            Scroll to <strong>Environment variables → Add an environment variable</strong> and set
+            <code>WIREGUARD_PRIVATE_KEY</code> to your NordLynx key
+            (<code>cat ~/media-stack/nordlynx.key</code>).
+            <strong>The stack will refuse to deploy without it</strong> — that's deliberate, so you
+            can never accidentally run the torrent client outside the tunnel.
+          </li>
+          <li>
+            Add a second variable, <code>SESSION_SECRET</code> — a long random string that Mixarr
+            uses to encrypt sessions. Generate one with
+            <code>openssl rand -hex 32</code> and paste it. It only matters for Mixarr; everything
+            else ignores it.
+          </li>
+          <li><strong>Deploy the stack</strong>. First pull is a few GB — Jellyfin is the big one.</li>
+        </ol>
+        <div class="note why">
+          <span class="note-k">Deploy order is handled for you</span>
+          <p>
+            qBittorrent has <code>depends_on: gluetun (service_healthy)</code>, so it won't start
+            until the tunnel is actually up and passing gluetun's own health check. There is no
+            window where it could leak traffic while the VPN is still connecting.
+          </p>
+        </div>
+        <div class="note care">
+          <span class="note-k">Port 8080 was already taken</span>
+          <p>
+            Your Nextcloud container holds <span class="port">8080</span>, so qBittorrent's web UI
+            is on <span class="port">8085</span> instead — set in <em>both</em> the
+            <code>WEBUI_PORT</code> variable and the published port. Changing one without the other
+            gives you a container that starts but never answers.
+          </p>
+        </div>
+        <p>All twelve containers share a network called <code>media</code>, which is why they can reach each other by container name — <code>http://sonarr:8989</code> and so on. Never use <code>localhost</code> between containers; inside a container that means the container itself.</p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal · confirm all twelve are up</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="c"># Filtra por proyecto, no por red: qbittorrent no está en la red 'media',
+# vive dentro de la pila de red de gluetun.</span>
+docker ps --filter label=com.docker.compose.project=media \
+          --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'</pre>
+        </div>
+        <div class="note good">
+          <span class="note-k">Expected</span>
+          <p>
+            Twelve containers, all <code>Up</code>, with <code>gluetun</code> showing
+            <code>(healthy)</code>. qBittorrent will list <em>no</em> ports of its own — correct, they
+            belong to gluetun. Anything stuck in <code>Restarting</code>, read its log with
+            <code>docker logs &lt;name&gt;</code> before continuing.
+          </p>
+        </div>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt"><code>WIREGUARD_PRIVATE_KEY</code> set in Portainer's environment variables</span></label></li>
+          <li><label><input type="checkbox"><span class="txt"><code>SESSION_SECRET</code> set in Portainer's environment variables</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Stack deployed, twelve containers <code>Up</code></span></label></li>
+          <li><label><input type="checkbox"><span class="txt"><code>gluetun</code> reports <code>(healthy)</code></span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Nothing in a restart loop</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 04 ================= -->
+    <section id="s4">
+      <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">qBittorrent — <span class="port">8085</span></h2></div>
+      <div class="sec-body">
+        <p>First, because everything downstream points at it.</p>
+
+        <h3>Before anything else: confirm the tunnel</h3>
+        <p>
+          qBittorrent now shares gluetun's network stack. Verify that its traffic really leaves via
+          NordVPN before you download a single byte — this is the check that tells you the whole
+          arrangement works:
+        </p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal · leak test</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="c"># La IP pública que ve qBittorrent (debe ser de NordVPN, en México)</span>
+docker exec qbittorrent curl -s https://ipinfo.io/json | jq '{ip, city, org}'
+
+<span class="c"># Compárala con la IP real de tu casa — TIENEN que ser distintas</span>
+curl -s https://ipinfo.io/json | jq '{ip, city, org}'</pre>
+        </div>
+        <div class="note stop">
+          <span class="note-k">If the two IPs match, stop</span>
+          <p>
+            That means qBittorrent is on your home connection and the tunnel isn't doing its job.
+            Check <code>docker logs gluetun</code> for a handshake failure — almost always a wrong or
+            stale private key. Fix it before adding any indexers.
+          </p>
+        </div>
+
+        <h3>Get the temporary password</h3>
+        <p>The LinuxServer image generates one on first boot rather than shipping a default:</p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal</span><button class="copy" type="button">Copy</button></div>
+<pre>docker logs qbittorrent 2&gt;&amp;1 | grep -i "temporary password"</pre>
+        </div>
+        <p>Log in at <code>http://192.0.2.10:8085</code> as <code>admin</code> with that password.</p>
+
+        <h3>Settings to change</h3>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Where</th><th>Setting</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Web UI</td><td>Username / password</td><td class="m">change immediately</td></tr>
+              <tr><td>Web UI</td><td>Bypass auth for localhost</td><td class="m">off</td></tr>
+              <tr><td>Downloads</td><td>Default save path</td><td class="m">/data/torrents</td></tr>
+              <tr><td>Downloads</td><td>Keep incomplete in</td><td class="m">/data/torrents/incomplete</td></tr>
+              <tr><td>BitTorrent</td><td>Seeding limits</td><td class="m">ratio 2.0, or per tracker rules</td></tr>
+              <tr><td>Connection</td><td>Port used for incoming</td><td class="m">6881</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note why">
+          <span class="note-k">Paths are container paths</span>
+          <p>
+            Inside qBittorrent you type <code>/data/torrents</code>, never <code>/mnt/disco/…</code>.
+            The host path exists only on the host; the container sees the mount point. Sonarr and
+            Radarr must agree on this exact spelling or imports fail with "file not found".
+          </p>
+        </div>
+        <p>Create two categories under <strong>Categories</strong> in the sidebar — Sonarr and Radarr will use them to sort their own downloads:</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Category</th><th>Save path</th></tr></thead>
+            <tbody>
+              <tr><td class="m">tv-sonarr</td><td class="m">/data/torrents/tv</td></tr>
+              <tr><td class="m">radarr</td><td class="m">/data/torrents/movies</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">Password changed from the generated one</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Save path is <code>/data/torrents</code></span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Categories <code>tv-sonarr</code> and <code>radarr</code> created</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 05 ================= -->
+    <section id="s5">
+      <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Prowlarr — <span class="port">9696</span></h2></div>
+      <div class="sec-body">
+        <p>Prowlarr manages indexers in one place and pushes them into Sonarr and Radarr automatically, so you never configure an indexer twice.</p>
+        <ol class="plain">
+          <li>Open <code>http://192.0.2.10:9696</code> and set an admin username and password when prompted (Settings → General → Security → Forms authentication).</li>
+          <li><strong>Settings → Indexers → Add indexer proxy</strong> → FlareSolverr → Host <code>http://flaresolverr:8191</code>, tag it <code>flaresolverr</code>.</li>
+          <li><strong>Indexers → Add indexer</strong>. Add the public ones you want; apply the <code>flaresolverr</code> tag to any that sit behind Cloudflare.</li>
+          <li>Leave <strong>Settings → Apps</strong> alone for now — you'll come back after Sonarr and Radarr exist.</li>
+        </ol>
+        <div class="note care">
+          <span class="note-k">Expect churn</span>
+          <p>Public indexers go down, rate-limit, and change domains constantly. Add several. The <strong>Test All Indexers</strong> button on the Indexers page is how you find out which ones are alive today.</p>
+        </div>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">Authentication enabled</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">FlareSolverr proxy added and testing green</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">At least three indexers passing <strong>Test All</strong></span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 06 ================= -->
+    <section id="s6">
+      <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">Sonarr &amp; Radarr — <span class="port">8989</span> <span class="port">7878</span></h2></div>
+      <div class="sec-body">
+        <p>Identical setup, one for TV and one for film. Do both.</p>
+
+        <h3>a · Media management</h3>
+        <p><strong>Settings → Media Management</strong>. Show advanced settings (the toggle at the top) and confirm:</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Rename Episodes / Movies</td><td class="m">on</td><td>Jellyfin matches on filename.</td></tr>
+              <tr><td>Replace Illegal Characters</td><td class="m">on</td><td>Required on NTFS — <code>: ? * " &lt; &gt; |</code> are rejected by the filesystem.</td></tr>
+              <tr><td>Use Hardlinks instead of Copy</td><td class="m">on</td><td>The whole point of the layout.</td></tr>
+              <tr><td>Import Extra Files</td><td class="m">srt, sub, ass</td><td>Keeps bundled subtitles.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Then <strong>Root Folders → Add</strong>:</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>App</th><th>Root folder</th></tr></thead>
+            <tbody>
+              <tr><td>Sonarr</td><td class="m">/data/media/tv</td></tr>
+              <tr><td>Radarr</td><td class="m">/data/media/movies</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note stop">
+          <span class="note-k">If the root folder won't save</span>
+          <p>A permissions error here means the disk isn't mounted where you think, or <code>umask=002</code> is missing from the fstab line. Go back to step 01 — do not work around it by loosening things inside the container.</p>
+        </div>
+
+        <h3>b · Download client</h3>
+        <p><strong>Settings → Download Clients → Add → qBittorrent</strong>:</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Field</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Host</td><td class="m">gluetun</td></tr>
+              <tr><td>Port</td><td class="m">8085</td></tr>
+              <tr><td>Username / password</td><td class="m">what you set in step 04</td></tr>
+              <tr><td>Category</td><td class="m">tv-sonarr (Sonarr) · radarr (Radarr)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note stop">
+          <span class="note-k">The host is gluetun, not qbittorrent</span>
+          <p>
+            This trips up everyone. qBittorrent runs inside gluetun's network stack, so it has no
+            network identity of its own — Docker's DNS has no record called <code>qbittorrent</code>
+            at all. The container that owns the address is <code>gluetun</code>, and port 8085 answers
+            there. Using <code>qbittorrent</code> as the host gives you a "connection refused" that
+            looks like a qBittorrent fault and isn't.
+          </p>
+        </div>
+        <p>Hit <strong>Test</strong>. Green tick or don't move on.</p>
+
+        <h3>c · Wire Prowlarr in</h3>
+        <p>Grab each API key from <strong>Settings → General → API Key</strong>, then back in Prowlarr go to <strong>Settings → Apps → Add</strong> and add both:</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Field</th><th>Sonarr</th><th>Radarr</th></tr></thead>
+            <tbody>
+              <tr><td>Prowlarr Server</td><td class="m">http://prowlarr:9696</td><td class="m">http://prowlarr:9696</td></tr>
+              <tr><td>Server</td><td class="m">http://sonarr:8989</td><td class="m">http://radarr:7878</td></tr>
+              <tr><td>API Key</td><td class="m">from Sonarr</td><td class="m">from Radarr</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Prowlarr immediately pushes every indexer into both apps. Check <strong>Settings → Indexers</strong> in Sonarr — they should appear on their own within a few seconds. From now on you only ever add indexers in Prowlarr.</p>
+
+        <h3>d · Quality profiles</h3>
+        <p>Pick a sane ceiling under <strong>Settings → Profiles</strong>. On a 1.2 TB disk, 1080p is the sweet spot; 4K remuxes will eat the drive in a couple of months. Also cap size per episode/movie under the quality definitions if your connection is modest.</p>
+
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">Sonarr: root folder, hardlinks on, qBittorrent test green</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Radarr: root folder, hardlinks on, qBittorrent test green</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Both apps added in Prowlarr, indexers synced across</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Quality profiles capped at 1080p</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 07 ================= -->
+    <section id="s7">
+      <div class="sec-head"><span class="sec-num">07</span><h2 class="sec-title">Jellyfin — <span class="port">8096</span></h2></div>
+      <div class="sec-body">
+        <p>Open <code>http://192.0.2.10:8096</code> and walk the setup wizard. Add two libraries:</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Content type</th><th>Folder</th></tr></thead>
+            <tbody>
+              <tr><td>Movies</td><td class="m">/data/media/movies</td></tr>
+              <tr><td>Shows</td><td class="m">/data/media/tv</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Jellyfin has this mount <strong>read-only</strong> in the compose file — it's a player, it has no business deleting your library.</p>
+
+        <h3>Hardware transcoding</h3>
+        <p>You have an Intel HD 520, and the stack already passes <code>/dev/dri</code> through with the <code>render</code> and <code>video</code> groups added. Turn it on at <strong>Dashboard → Playback → Transcoding</strong>:</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Hardware acceleration</td><td class="m">Video Acceleration API (VAAPI)</td></tr>
+              <tr><td>VA-API device</td><td class="m">/dev/dri/renderD128</td></tr>
+              <tr><td>Enable hardware decoding</td><td class="m">H264, HEVC, VC1, VP9</td></tr>
+              <tr><td>Hardware encoding</td><td class="m">on</td></tr>
+              <tr><td>Tone mapping</td><td class="m">off</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note care">
+          <span class="note-k">Know the ceiling</span>
+          <p>
+            Skylake handles H.264 and 8-bit HEVC in hardware and will comfortably run several
+            streams at once. It has <strong>no AV1 decoder</strong> and 10-bit HEVC tone mapping will
+            fall back to software and pin your CPU. Prefer direct play: match your quality profiles
+            to what your clients can play natively and Jellyfin never transcodes at all.
+          </p>
+        </div>
+        <p>Verify it's actually working — play something that forces a transcode, then:</p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal · while a transcode is running</span><button class="copy" type="button">Copy</button></div>
+<pre>docker exec jellyfin ls -l /dev/dri
+sudo intel_gpu_top   <span class="c"># apt install intel-gpu-tools — Video engine should be busy</span></pre>
+        </div>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">Both libraries added and scanning</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">VAAPI enabled on <code>/dev/dri/renderD128</code></span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Playback confirmed from a phone or tablet on the LAN</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 08 ================= -->
+    <section id="s8">
+      <div class="sec-head"><span class="sec-num">08</span><h2 class="sec-title">Bazarr — <span class="port">6767</span></h2></div>
+      <div class="sec-body">
+        <p>Subtitles. It reads your finished library and fills the gaps.</p>
+        <ol class="plain">
+          <li><strong>Settings → Sonarr</strong> — enable, address <code>sonarr</code>, port <code>8989</code>, paste the API key. Same for <strong>Radarr</strong> with <code>radarr</code> / <code>7878</code>.</li>
+          <li><strong>Settings → Languages</strong> — create a profile with Spanish and English, then set it as the default for both series and movies.</li>
+          <li><strong>Settings → Providers</strong> — add OpenSubtitles.com and Subdivx (the latter is worth having for Latin-American Spanish). OpenSubtitles needs a free account.</li>
+        </ol>
+        <div class="note care">
+          <span class="note-k">Path mapping</span>
+          <p>Bazarr mounts <code>/data/media</code> at the same path Sonarr and Radarr use, so no path mapping is needed. If Bazarr reports it can't find files, that's the first thing to re-check.</p>
+        </div>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">Sonarr and Radarr both connected</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Language profile set as default</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">At least one provider authenticated</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 09 ================= -->
+    <section id="s9">
+      <div class="sec-head"><span class="sec-num">09</span><h2 class="sec-title">Jellyseerr — <span class="port">5055</span></h2></div>
+      <div class="sec-body">
+        <p>This is the discovery layer you asked for — a browsable catalogue where you (or family) request something and the rest of the chain does the work. It's the only URL anyone else needs.</p>
+        <ol class="plain">
+          <li>Open <code>http://192.0.2.10:5055</code> and choose <strong>Sign in with Jellyfin</strong>. Server URL <code>http://jellyfin:8096</code>, then your Jellyfin admin credentials.</li>
+          <li>Import your Jellyfin libraries when prompted, and run the initial scan so it knows what you already own.</li>
+          <li><strong>Settings → Services → Add Radarr</strong>: hostname <code>radarr</code>, port <code>7878</code>, API key, quality profile, root folder <code>/data/media/movies</code>. Mark it default.</li>
+          <li><strong>Add Sonarr</strong>: hostname <code>sonarr</code>, port <code>8989</code>, API key, root folder <code>/data/media/tv</code>. Mark it default.</li>
+          <li><strong>Settings → Users</strong> — add family accounts and leave auto-approve off if you want a say in what lands on the disk.</li>
+        </ol>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">Signed in against Jellyfin, libraries imported</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Radarr and Sonarr both connected and marked default</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 10 ================= -->
+    <section id="s10">
+      <div class="sec-head"><span class="sec-num">10</span><h2 class="sec-title">Music stack — Lidarr · Navidrome · Mixarr</h2></div>
+      <div class="sec-body">
+        <p>
+          Music is a parallel lane on the same plumbing. Lidarr downloads and imports albums into
+          <code>/data/media/music</code>, Navidrome streams that folder, and Mixarr finds new artists
+          to feed Lidarr. Prowlarr, qBittorrent and gluetun are all shared with the video stack.
+        </p>
+
+        <h3>a · Lidarr — <span class="port">8686</span></h3>
+        <p>Open <code>http://192.0.2.10:8686</code> and set the admin credentials. Then:</p>
+        <ol class="plain">
+          <li><strong>Settings → Media Management</strong> (advanced settings on): Rename albums on, Replace Illegal Characters on, Use Hardlinks instead of Copy on.</li>
+          <li><strong>Settings → Media Management → Root Folder</strong>: <code>/data/media/music</code>.</li>
+          <li><strong>Settings → Download Clients → Add → qBittorrent</strong>: Host <code>gluetun</code>, port <code>8085</code>, your credentials, category <code>lidarr</code>. Test — green tick or stop.</li>
+          <li><strong>Settings → General → API Key</strong>: copy it, then add Lidarr in Prowlarr (<strong>Settings → Apps</strong>) exactly like Sonarr/Radarr with <code>http://lidarr:8686</code>. Indexers sync over automatically.</li>
+          <li>Create the category in qBittorrent first (<code>lidarr</code> → <code>/data/torrents/music</code>), matching what you typed in step 3.</li>
+        </ol>
+        <div class="note care">
+          <span class="note-k">Expect missing metadata on obscure albums</span>
+          <p>
+            MusicBrainz is the metadata source and its cache gets hammered; some niche albums land
+            with no artwork or wrong tags. Lidarr's <strong>Tasks → Refresh Artist</strong> is the
+            retry button. Also, the good music torrent indexers are mostly private (Redacted,
+            Orpheus) — public ones are thin, so expect fewer grabs than with video.
+          </p>
+        </div>
+
+        <h3>b · Navidrome — <span class="port">4533</span></h3>
+        <p>Open <code>http://192.0.2.10:4533</code> and create the admin account on first run. It scans <code>/data/media/music</code> automatically every hour — point it at the library if it asks, and it will show whatever Lidarr has imported. Use <code>Finamp</code> (iOS/Android) or <code>Symfonium</code> on the phone for playback.</p>
+
+        <h3>c · Mixarr — <span class="port">3443</span> (HTTPS)</h3>
+        <p>Open <code>https://192.0.2.10:3443</code> (self-signed cert — accept the warning) and create the admin account. Then:</p>
+        <ol class="plain">
+          <li><strong>Settings → Global</strong>: Base URL already set to <code>https://192.0.2.10:3443</code> — leave it.</li>
+          <li><strong>Settings → Connections → Lidarr</strong>: <code>http://lidarr:8686</code> + API key.</li>
+          <li><strong>Settings → Services</strong>: connect Last.fm, ListenBrainz, TIDAL or Deezer (OAuth). This is what powers discovery. <strong>Spotify no longer works on a free account</strong> — see the note below.</li>
+          <li>Create subscriptions under <strong>Discover → Subscriptions</strong> (e.g. a Spotify playlist, Last.fm tag, or global charts). New finds land in the <strong>Review queue</strong> for approval before Lidarr ever sees them.</li>
+        </ol>
+        <div class="note why">
+          <span class="note-k">How it reaches Lidarr</span>
+          <p>Mixarr talks to Lidarr over the <code>media</code> network by name. It never touches your files — it only asks Lidarr to add approved artists, and Lidarr does the grabbing via the same qBittorrent tunnel as everything else.</p>
+        </div>
+
+        <div class="note why">
+          <span class="note-k">Why Spotify is not on that list</span>
+          <p>
+            Since February 2026 Spotify requires the developer account that owns the app to hold an
+            active <strong>Premium</strong> subscription — Development Mode apps on a free account
+            are blocked from the Web API entirely. Every call returns
+            <code>403 Forbidden</code>, and no amount of allowlisting fixes it. The same round of
+            changes cut authorized users per app from 25 to 5 and limits you to one Client ID.
+            Last.fm and ListenBrainz need only a free API key, so use those instead.
+          </p>
+        </div>
+
+        <h3>d · ytm-bridge — <span class="port">8099</span></h3>
+        <p>YouTube Music has no official API and Lidarr has no YTM import list, so this small service bridges the gap: it reads your YTM recommendations, resolves the artist names to MusicBrainz IDs, and publishes them as a JSON list Lidarr can subscribe to.</p>
+        <ol class="plain">
+          <li>
+            <strong>Get YTM credentials.</strong> On your desktop, open
+            <code>https://music.youtube.com</code> logged in, press <kbd>Ctrl-Shift-I</kbd> →
+            <strong>Network</strong> tab, filter by <code>/browse</code>, click any POST request,
+            open <strong>Request Headers</strong> and switch it to the <strong>Raw</strong> view.
+            Copy all of it into a text file, then run
+            <code>./ytm-bridge/make-auth.sh ~/ytm-headers.txt</code>. That writes
+            <code>/opt/appdata/ytm-bridge/headers_auth.json</code>. Credentials stay valid ~2 years
+            unless you log out.
+          </li>
+          <li>
+            <strong>Doing it by hand instead?</strong>
+            <code>pipx run ytmusicapi browser --file headers_auth.json</code> works too, but it reads
+            until end-of-input — after pasting you must press <kbd>Ctrl-D</kbd> or it just sits
+            there. It also prints the JSON to stderr and <strong>exits 1 even on success</strong>;
+            check whether the file exists rather than trusting the exit code. The wrapper script
+            handles both. The bridge accepts <code>headers_auth.json</code>, the default
+            <code>browser.json</code>, or an <code>oauth.json</code>.
+          </li>
+          <li>
+            <strong>Export the API key.</strong> Lidarr → Settings → General → API Key, then
+            <code>export LIDARR_API_KEY=…</code> alongside the other secrets before
+            <code>docker compose up -d</code>.
+          </li>
+          <li>
+            <strong>Bootstrap with Takeout (optional).</strong> Google Takeout → YouTube and YouTube
+            Music → your library as CSV. Unzip the CSVs into
+            <code>/opt/appdata/ytm-bridge/takeout/</code> and the bridge folds years of listening
+            into the list on the next refresh. Any column whose header mentions
+            <em>artist</em> is picked up, so format changes on Google's side don't break it.
+          </li>
+          <li>
+            <strong>Point Lidarr at it.</strong> Lidarr → Settings → Import Lists → <strong>+</strong>
+            → <strong>Custom List</strong> (under <em>Advanced</em>). List URL:
+            <code>http://ytm-bridge:8080/artists.json</code>. Set Monitor, Quality Profile,
+            Metadata Profile and Root Folder (<code>/data/media/music</code>) as you like, then
+            <strong>Test</strong> and Save.
+          </li>
+        </ol>
+        <p>Check <code>http://192.0.2.10:8099/status</code> to see the last refresh, how many artists were published, and which names it could not resolve. <code>curl -X POST http://192.0.2.10:8099/refresh</code> forces a run instead of waiting for the 12-hour cycle.</p>
+        <div class="note why">
+          <span class="note-k">Leave Search on New Items off at first</span>
+          <p>
+            The first refresh can publish hundreds of artists. If Lidarr is set to search
+            immediately, that is hundreds of simultaneous indexer searches — a fast way to get
+            rate-limited or banned. Import once with searching disabled, prune what you do not
+            want, then turn it on.
+          </p>
+        </div>
+        <div class="note why">
+          <span class="note-k">Why not just yt-dlp the music</span>
+          <p>
+            You could pull the audio straight off YouTube, but it tops out around Opus 256kbps with
+            scraped tags, which fights both Lidarr's release matching and Navidrome's organization.
+            Using YTM for <em>discovery</em> and your existing indexers for <em>acquisition</em>
+            keeps one clean, properly tagged library. Keep yt-dlp for the rare thing no indexer has.
+          </p>
+        </div>
+
+        <h3>e · In qBittorrent</h3>
+        <p>Add the <code>lidarr</code> category (<code>/data/torrents/music</code>) if Lidarr's test didn't already force it. Seeding limits: albums seed on ratio like anything else.</p>
+
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">Lidarr: root folder <code>/data/media/music</code>, hardlinks on, qBittorrent test green</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Lidarr added as an app in Prowlarr, indexers synced</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Navidrome shows at least one album after a scan</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Mixarr: Lidarr connected, at least one service connected, one subscription set up</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">ytm-bridge: <code>/status</code> shows a recent refresh and a non-zero artist count</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Lidarr: Custom List added, Test green, first import reviewed</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 11 ================= -->
+    <section id="s11">
+      <div class="sec-head"><span class="sec-num">11</span><h2 class="sec-title">Prove the whole chain works</h2></div>
+      <div class="sec-body">
+        <p>One request, end to end. Pick something small and well-seeded.</p>
+        <ol class="plain">
+          <li>In Jellyseerr, search a film and hit <strong>Request</strong>.</li>
+          <li>Radarr <strong>Activity → Queue</strong> shows it grabbed within a minute or so.</li>
+          <li>qBittorrent shows it downloading under the <code>radarr</code> category.</li>
+          <li>On completion, Radarr imports it and it appears under <code>/data/media/movies</code>.</li>
+          <li>Jellyfin picks it up on the next scan — force one from <strong>Dashboard → Libraries → Scan</strong>.</li>
+          <li>Play it.</li>
+        </ol>
+        <h3>Confirm the hardlink actually happened</h3>
+        <p>This is the test worth running once, because a silent fallback to copying is invisible until the disk is full:</p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="c"># Link count of 2 means one file, two names — the hardlink worked.</span>
+find /mnt/disco/data/media -type f -links +1 -printf '%n  %p\n' | head
+
+<span class="c"># And the space check: used should be far less than the sum of both trees.</span>
+du -sh /mnt/disco/data/torrents /mnt/disco/data/media
+df -h /mnt/disco</pre>
+        </div>
+        <div class="note good">
+          <span class="note-k">Reading the result</span>
+          <p>
+            If <code>du</code> reports, say, 40 G + 40 G but <code>df</code> shows only 40 G consumed,
+            hardlinks are working exactly as intended. If the disk really lost 80 G, Radarr copied
+            instead — go back and check <strong>Use Hardlinks instead of Copy</strong> and that both
+            containers mount the single <code>/data</code> parent.
+          </p>
+        </div>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">Request → download → import → playback completed once</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Link count of 2 confirmed on an imported file</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Rebooted the server and everything came back on its own</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ================= REFERENCE ================= -->
+    <section id="ref">
+      <div class="sec-head"><span class="sec-num">—</span><h2 class="sec-title">Port reference</h2></div>
+      <div class="sec-body">
+        <p>Every port below was checked as free on this machine before it was assigned.</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Service</th><th>URL</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td>Jellyseerr</td><td class="m">192.0.2.10:5055</td><td>Start here day to day</td></tr>
+              <tr><td>Jellyfin</td><td class="m">192.0.2.10:8096</td><td>+ 7359/udp discovery, 1900/udp DLNA</td></tr>
+              <tr><td>qBittorrent</td><td class="m">192.0.2.10:8085</td><td>Published by <strong>gluetun</strong>. Moved off 8080 — Nextcloud has it</td></tr>
+              <tr><td>Sonarr</td><td class="m">192.0.2.10:8989</td><td></td></tr>
+              <tr><td>Radarr</td><td class="m">192.0.2.10:7878</td><td></td></tr>
+              <tr><td>Prowlarr</td><td class="m">192.0.2.10:9696</td><td></td></tr>
+              <tr><td>Bazarr</td><td class="m">192.0.2.10:6767</td><td></td></tr>
+              <tr><td>FlareSolverr</td><td class="m">192.0.2.10:8191</td><td>No UI — used by Prowlarr only</td></tr>
+              <tr><td>Lidarr</td><td class="m">192.0.2.10:8686</td><td>Music — like Sonarr but for albums</td></tr>
+              <tr><td>Navidrome</td><td class="m">192.0.2.10:4533</td><td>Music streaming (Subsonic API)</td></tr>
+              <tr><td>Mixarr</td><td class="m">192.0.2.10:3443</td><td>Music discovery — HTTPS (self-signed). HTTP on 3010 for a reverse proxy</td></tr>
+              <tr><td>ytm-bridge</td><td class="m">192.0.2.10:8099</td><td>YouTube Music → Lidarr Custom List. Only <code>/status</code> is worth visiting; Lidarr reads it internally on 8080</td></tr>
+              <tr><td>BitTorrent</td><td class="m">—</td><td>Not published. NordVPN offers no port forwarding, so nothing to forward on the router either</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note why">
+          <span class="note-k">Already running on this box</span>
+          <p>
+            Nginx Proxy Manager holds <span class="port">80</span> <span class="port">81</span>
+            <span class="port">443</span>, Portainer <span class="port">9000</span>, Nextcloud
+            <span class="port">8080</span>, AdGuard <span class="port">53</span>, and Sunshine
+            <span class="port">47984–48010</span>. Since you already run NPM, putting
+            <code>jellyfin.casa</code> and <code>pedidos.casa</code> in front of these is a natural
+            next step — and the only way you'll get HTTPS, which some Jellyfin clients want.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TROUBLE ================= -->
+    <section id="trouble">
+      <div class="sec-head"><span class="sec-num">—</span><h2 class="sec-title">When it breaks</h2></div>
+      <div class="sec-body">
+        <h3>Every container fails at once, disk reads read-only</h3>
+        <p>
+          This is the NTFS one, and it <em>will</em> happen eventually — an unclean shutdown sets the
+          dirty bit and <code>ntfs3</code> refuses to mount read-write.
+        </p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal · the NTFS fix</span><button class="copy" type="button">Copy</button></div>
+<pre>P=label=com.docker.compose.project=media
+docker stop $(docker ps -q --filter $P)
+sudo umount /mnt/disco
+sudo ntfsfix -d /dev/sdb2
+sudo mount /mnt/disco
+docker start $(docker ps -aq --filter $P)</pre>
+        </div>
+        <div class="note care">
+          <span class="note-k">The long-term answer</span>
+          <p>
+            NTFS is the one genuinely fragile part of this build. ext4 removes this whole failure
+            class, but converting means relocating the 708 GB already on the drive. Not worth doing
+            today — worth doing the next time you have a spare disk to stage through.
+          </p>
+        </div>
+
+        <div class="tw">
+          <table>
+            <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Root filesystem filling up fast</td>
+                <td>Disk didn't mount; containers wrote to the SSD</td>
+                <td><code>findmnt /mnt/disco</code>. If empty, stop the stack, clear the stray files, remount.</td>
+              </tr>
+              <tr>
+                <td>"Permission denied" importing</td>
+                <td>fstab missing <code>uid=1000,gid=1000,umask=002</code></td>
+                <td>Fix the fstab line, <code>sudo mount -o remount /mnt/disco</code>.</td>
+              </tr>
+              <tr>
+                <td>Import copies instead of hardlinking</td>
+                <td>Separate bind mounts, or hardlinks disabled</td>
+                <td>One <code>/data</code> mount per container; enable hardlinks in Media Management.</td>
+              </tr>
+              <tr>
+                <td>Sonarr can't reach qBittorrent</td>
+                <td>Used <code>qbittorrent</code> or <code>localhost</code> as the host</td>
+                <td>Host is <code>gluetun</code>, port <code>8085</code> — qBittorrent has no DNS name of its own.</td>
+              </tr>
+              <tr>
+                <td>qBittorrent won't start; gluetun unhealthy</td>
+                <td>Bad or stale NordLynx key, or Nord server unreachable</td>
+                <td><code>docker logs gluetun</code>. Re-run <code>get-nordlynx-key.sh</code> and update the Portainer variable.</td>
+              </tr>
+              <tr>
+                <td>ytm-bridge publishes 0 artists</td>
+                <td>No <code>headers_auth.json</code>, or the YTM session expired</td>
+                <td><code>/status</code> lists the reason under <code>warnings</code>. Re-run <code>make-auth.sh</code> with fresh headers.</td>
+              </tr>
+              <tr>
+                <td><code>ytmusicapi browser</code> seems to hang after pasting</td>
+                <td>It reads stdin until end-of-input</td>
+                <td>Press <kbd>Ctrl-D</kbd>. It then exits 1 and prints JSON to stderr <em>even when it worked</em> — check the file, not the exit code. Or just use <code>make-auth.sh</code>.</td>
+              </tr>
+              <tr>
+                <td>"The following entries are missing in your headers"</td>
+                <td>Copied Response Headers, or a request without your session</td>
+                <td>It needs <code>cookie</code> and <code>x-goog-authuser</code>. Use a POST to <code>/browse</code>, Request Headers, Raw view.</td>
+              </tr>
+              <tr>
+                <td>Artists in YTM never reach Lidarr</td>
+                <td>Name didn't resolve to a MusicBrainz ID</td>
+                <td>Check <code>unresolvedSample</code> in <code>/status</code>. Usually the artist isn't in MusicBrainz, or is spelled differently — add it there, or set <code>STRICT_MATCH=false</code> to accept fuzzy matches (expect some wrong ones).</td>
+              </tr>
+              <tr>
+                <td>Web UI unreachable after a stack recreate</td>
+                <td><code>media</code> network re-created on a different subnet</td>
+                <td>Subnet is pinned to <code>172.30.0.0/24</code>; if you changed it, match <code>FIREWALL_OUTBOUND_SUBNETS</code>.</td>
+              </tr>
+              <tr>
+                <td>Torrents stall at 0% though the tracker looks fine</td>
+                <td>No incoming connections — inherent to NordVPN</td>
+                <td>Expected. Prefer well-seeded releases; nothing to fix.</td>
+              </tr>
+              <tr>
+                <td>Indexer returns Cloudflare errors</td>
+                <td>Challenge page not being solved</td>
+                <td>Tag the indexer <code>flaresolverr</code> in Prowlarr.</td>
+              </tr>
+              <tr>
+                <td>Jellyfin plays but the CPU pegs</td>
+                <td>VAAPI off, or the codec isn't supported</td>
+                <td>Check Dashboard → Playback; expect software fallback on AV1 and 10-bit HEVC.</td>
+              </tr>
+              <tr>
+                <td>Downloads finish but never import</td>
+                <td>Category mismatch between qBittorrent and the *arr</td>
+                <td>Categories must match exactly: <code>tv-sonarr</code>, <code>radarr</code>.</td>
+              </tr>
+              <tr>
+                <td>Filename rejected on write</td>
+                <td><code>windows_names</code> blocking an illegal character</td>
+                <td>Turn on Replace Illegal Characters in Sonarr/Radarr.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Routine maintenance</h3>
+        <ul>
+          <li><strong>Watch free space.</strong> Seeding plus a 1080p habit fills 1.2 TB faster than you'd guess. Set seeding limits in qBittorrent so completed torrents eventually clear.</li>
+          <li><strong>Back up <code>/opt/appdata</code>.</strong> That's every setting, request history and library database in the stack. You have Nextcloud right there.</li>
+          <li><strong>Update deliberately.</strong> In Portainer, <em>Recreate</em> with "pull latest image" — one container at a time, not all eight at once, so you know what broke.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= VPN ================= -->
+    <section id="vpn">
+      <div class="sec-head"><span class="sec-num">—</span><h2 class="sec-title">How the VPN is wired</h2></div>
+      <div class="sec-body">
+        <p>
+          Gluetun is part of the stack, not an optional extra. Only qBittorrent routes through it;
+          Jellyfin, Jellyseerr and the rest stay on the LAN at their normal addresses. Reference
+          material — nothing to do here beyond understanding it.
+        </p>
+
+        <h3>Getting your NordLynx key</h3>
+        <p>
+          Nord never displays the WireGuard private key. You generate an <em>access token</em> at
+          <strong>nordaccount.com → Services → NordVPN → Manual setup → Generate new token</strong>,
+          then trade it for the key:
+        </p>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal</span><button class="copy" type="button">Copy</button></div>
+<pre>~/media-stack/get-nordlynx-key.sh</pre>
+        </div>
+        <p>
+          The key lands in <code>nordlynx.key</code> with <code>600</code> permissions — 44 characters
+          ending in <code>=</code>. It goes into Portainer's environment variables as
+          <code>WIREGUARD_PRIVATE_KEY</code>, never into the compose text itself.
+        </p>
+        <div class="note care">
+          <span class="note-k">Don't read it off the local client</span>
+          <p>
+            <code>wg show nordlynx private-key</code> is the usual shortcut, but you have Meshnet
+            enabled — which holds the same <code>nordlynx</code> interface with a <em>different</em>
+            key. You'd get the Meshnet key and gluetun would never complete a handshake.
+          </p>
+        </div>
+
+        <h3>What each setting does</h3>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Setting</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td class="m">network_mode: service:gluetun</td><td>qBittorrent has no network of its own. If gluetun stops, qBittorrent has no route out at all — that's the kill switch, enforced by Docker rather than by config.</td></tr>
+              <tr><td class="m">FIREWALL_OUTBOUND_SUBNETS</td><td><code>192.0.2.0/24</code> lets you reach the web UI from the LAN; <code>172.30.0.0/24</code> lets Sonarr and Radarr talk to it. Without these, gluetun's firewall drops the replies and everything times out.</td></tr>
+              <tr><td class="m">subnet: 172.30.0.0/24</td><td>The <code>media</code> network is pinned so that firewall rule stays valid. Docker would otherwise assign a different subnet on recreate and silently break it.</td></tr>
+              <tr><td class="m">depends_on: service_healthy</td><td>No startup window where torrents could move before the tunnel is up.</td></tr>
+              <tr><td class="m">SERVER_COUNTRIES=Mexico</td><td>Lowest latency for you. Widen it if throughput disappoints.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note care">
+          <span class="note-k">NordVPN has no port forwarding</span>
+          <p>
+            Nord dropped it entirely, and gluetun can only negotiate forwarded ports with providers
+            that offer it (PIA, ProtonVPN). So there's no point publishing <span class="port">6881</span>
+            on the host any more, and it isn't in the compose. Practically: qBittorrent can still
+            connect <em>out</em> to peers and downloads work fine, but no peer can initiate a
+            connection <em>to</em> you. Expect slower starts on thinly-seeded content, and be aware
+            that private trackers which measure connectability will mark you unconnectable. If you
+            ever join one, that's the moment to reconsider the provider — not the setup.
+          </p>
+        </div>
+
+        <div class="note why">
+          <span class="note-k">Why not just run the NordVPN client</span>
+          <p>
+            <code>nordvpn connect</code> routes the <strong>entire machine</strong> — Jellyfin,
+            Nextcloud, Sunshine, all of it — through the tunnel, which breaks LAN access for everyone
+            in the house and would kill your Moonlight streaming. Keep the desktop client
+            disconnected. Meshnet can stay on; it doesn't conflict with gluetun, which builds its own
+            tunnel inside the container.
+          </p>
+        </div>
+
+        <h3>Checks worth repeating</h3>
+        <div class="code">
+          <div class="code-top"><span class="code-label">terminal</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="c"># ¿Sigue saliendo por la VPN?</span>
+docker exec qbittorrent curl -s https://ipinfo.io/json | jq '{ip, city, org}'
+
+<span class="c"># Estado del túnel y del servidor elegido</span>
+docker logs --tail 20 gluetun</pre>
+        </div>
+        <ul class="check">
+          <li><label><input type="checkbox"><span class="txt">NordLynx key retrieved and stored in Portainer</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">qBittorrent's public IP differs from your home IP</span></label></li>
+          <li><label><input type="checkbox"><span class="txt">Desktop NordVPN client left disconnected</span></label></li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>media stack runbook</span>
+    <span>~/media-stack/</span>
+    <span>docker-compose.yml · setup-host.sh · get-nordlynx-key.sh · guide.html</span>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    // ---- copy buttons ----
+    document.querySelectorAll('.copy').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pre = btn.closest('.code').querySelector('pre');
+        var text = pre.innerText;
+        var done = function () {
+          btn.textContent = 'Copied';
+          btn.dataset.done = '1';
+          setTimeout(function () { btn.textContent = 'Copy'; btn.removeAttribute('data-done'); }, 1600);
+        };
+        try {
+          navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+        } catch (e) {
+          fallback(text, done);
+        }
+      });
+    });
+
+    function fallback(text, done) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        done();
+      } catch (e) { /* clipboard unavailable; text is selectable anyway */ }
+    }
+
+    // ---- checklist progress, persisted where possible ----
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.check input[type=checkbox]'));
+    var doneEl = document.getElementById('pdone');
+    var totalEl = document.getElementById('ptotal');
+    var barEl = document.getElementById('pbar');
+    var KEY = 'media-stack-media-runbook';
+
+    totalEl.textContent = boxes.length;
+
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { saved = {}; }
+
+    boxes.forEach(function (b, i) {
+      b.id = 'chk' + i;
+      if (saved[b.id]) { b.checked = true; }
+      b.addEventListener('change', function () {
+        saved[b.id] = b.checked;
+        try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) { /* fine, session only */ }
+        render();
+      });
+    });
+
+    function render() {
+      var n = boxes.filter(function (b) { return b.checked; }).length;
+      doneEl.textContent = n;
+      barEl.style.width = boxes.length ? (n / boxes.length * 100) + '%' : '0%';
+    }
+    render();
+  })();
+</script>

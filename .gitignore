@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------
+# Secretos
+# ---------------------------------------------------------------
+# OJO: este repo usa rutas con "/" porque el patrón "archivo.txt"
+# (sin barra) NO se aplica a los subdirectorios de forma fiable.
+# Con barra, el patrón es relativo a la raíz del repo.
+.env
+*/.env
+*.key
+*.pem
+*.p12
+
+# ---------------------------------------------------------------
+# Credenciales de YouTube Music (ytmusicapi)
+# ---------------------------------------------------------------
+# ytm-headers.txt = cookies de sesión de tu cuenta pegados del
+# navegador. Da acceso a la cuenta: nunca debe subir al repo.
+ytm-bridge/ymt-headers.txt
+ytm-bridge/headers_auth.json
+ytm-bridge/browser.json
+ytm-bridge/oauth.json
+
+# Datos que genera el puente en tiempo de ejecución
+ytm-bridge/artists.json
+ytm-bridge/cache.json
+ytm-bridge/state.json
+
+# ---------------------------------------------------------------
+# Takeout de Google Music (historial personal de escucha)
+# ---------------------------------------------------------------
+takeout/
+ytm-bridge/takeout/
+*.csv
+
+# ---------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# ---------------------------------------------------------------
+# Sistema y editores
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

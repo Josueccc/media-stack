@@ -1,0 +1,297 @@
+networks:
+  media:
+    name: media
+    # Subred fija: gluetun necesita conocerla para permitir el tráfico
+    # de vuelta hacia Sonarr/Radarr a través de su firewall.
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-172.30.0.0/24}
+
+services:
+  # ---------------------------------------------------------------
+  # 0. Gluetun - túnel VPN con kill switch.
+  #    Solo qBittorrent vive dentro de él; el resto del stack sigue
+  #    accesible normalmente en la LAN.
+  # ---------------------------------------------------------------
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks: [media]
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY:?falta la llave NordLynx}
+      - SERVER_COUNTRIES=${VPN_SERVER_COUNTRIES:-Mexico}
+      - TZ=${TZ:-Etc/UTC}
+      # Sin esto el firewall de gluetun bloquea las respuestas hacia la LAN
+      # (WebUI) y hacia los demás contenedores (Sonarr/Radarr).
+      - FIREWALL_OUTBOUND_SUBNETS=${LAN_SUBNET:?falta LAN_SUBNET (p.ej. 192.0.2.0/24)},${DOCKER_SUBNET:-172.30.0.0/24}
+      - HEALTH_VPN_DURATION_INITIAL=30s
+    ports:
+      # La WebUI de qBittorrent se publica AQUÍ, no en su propio servicio.
+      - 8085:8085
+    restart: unless-stopped
+  # ---------------------------------------------------------------
+  # 1. Prowlarr - gestor de indexers (alimenta a Sonarr/Radarr)
+  # ---------------------------------------------------------------
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    networks: [media]
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/prowlarr:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 2. Sonarr - series
+  # ---------------------------------------------------------------
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    networks: [media]
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - UMASK=002
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/sonarr:/config
+      - ${DATA_DIR:?falta DATA_DIR (p.ej. /mnt/disk/data)}:/data
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 3. Radarr - películas
+  # ---------------------------------------------------------------
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    networks: [media]
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - UMASK=002
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/radarr:/config
+      - ${DATA_DIR:?falta DATA_DIR (p.ej. /mnt/disk/data)}:/data
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 4. Bazarr - subtítulos (solo necesita la biblioteca final)
+  # ---------------------------------------------------------------
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    networks: [media]
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - UMASK=002
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/bazarr:/config
+      - ${DATA_DIR:?falta DATA_DIR (p.ej. /mnt/disk/data)}/media:/data/media
+    ports:
+      - 6767:6767
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 5. qBittorrent - cliente de descargas
+  #    WebUI en 8085 porque el 8080 lo usa Nextcloud.
+  #    Comparte la pila de red de gluetun: NO tiene red ni puertos propios.
+  #    => Sonarr/Radarr deben apuntarle como http://gluetun:8085
+  # ---------------------------------------------------------------
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - WEBUI_PORT=8085
+      - UMASK=002
+      - TORRENTING_PORT=6881
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/qbittorrent:/config
+      - ${DATA_DIR:?falta DATA_DIR (p.ej. /mnt/disk/data)}/torrents:/data/torrents
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 6. Jellyfin - servidor de streaming
+  #    Solo lectura sobre la biblioteca: no tiene por qué borrar nada
+  #    /dev/dri = transcodificación por hardware (Intel HD 520 / QSV)
+  # ---------------------------------------------------------------
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    networks: [media]
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - JELLYFIN_PublishedServerUrl=http://${SERVER_IP:?falta SERVER_IP (IP LAN del host)}:8096
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "44"   # video
+      - "992"  # render
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/jellyfin:/config
+      - ${DATA_DIR:?falta DATA_DIR (p.ej. /mnt/disk/data)}/media:/data/media:ro
+    ports:
+      - 8096:8096
+      - 7359:7359/udp   # auto-discovery en la LAN
+      - 1900:1900/udp   # DLNA
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 7. Jellyseerr - descubrimiento y peticiones (la portada bonita)
+  # ---------------------------------------------------------------
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    networks: [media]
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ:-Etc/UTC}
+    user: "${PUID:-1000}:${PGID:-1000}"
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/jellyseerr:/app/config
+    ports:
+      - 5055:5055
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 8. FlareSolverr - resuelve el Cloudflare de algunos indexers
+  # ---------------------------------------------------------------
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    networks: [media]
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ:-Etc/UTC}
+    ports:
+      - 8191:8191
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 9. Lidarr - música (el Sonarr/Radarr de los álbumes)
+  #    Mismo layout de hardlinks: /data es el mount padre único.
+  #    Descargas: apuntar al cliente como http://gluetun:8085 (categoría 'lidarr')
+  # ---------------------------------------------------------------
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    networks: [media]
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - UMASK=002
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/lidarr:/config
+      - ${DATA_DIR:?falta DATA_DIR (p.ej. /mnt/disk/data)}:/data
+    ports:
+      - 8686:8686
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 10. Navidrome - servidor de streaming musical
+  #     Solo lectura sobre la biblioteca de música, como Jellyfin.
+  #     API Subsonic => apps móviles (Symfonium, play:sub, substreamer).
+  # ---------------------------------------------------------------
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    networks: [media]
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - ND_SCANSCHEDULER=1h
+      - ND_LOGLEVEL=info
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/navidrome:/data
+      - ${DATA_DIR:?falta DATA_DIR (p.ej. /mnt/disk/data)}/media/music:/music:ro
+    ports:
+      - 4533:4533
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 11. Mixarr - descubrimiento musical (Spotify, TIDAL, Last.fm...)
+  #     Imagen unificada: trae MariaDB, Redis y Caddy dentro.
+  #     Acceso principal: https://${SERVER_IP}:3443
+  #     3010 = UI HTTP directa (para NPM si algún día la pones detrás de proxy).
+  # ---------------------------------------------------------------
+  mixarr:
+    image: ghcr.io/aquantumofdonuts/mixarr:latest
+    container_name: mixarr
+    networks: [media]
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+      - SESSION_SECRET=${SESSION_SECRET:?falta SESSION_SECRET}
+      - BASE_URL=https://${SERVER_IP}:3443
+      - FRONTEND_URL=https://${SERVER_IP}:3443
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/mixarr:/data
+    ports:
+      - 3443:443
+      - 3010:3010
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------
+  # 12. ytm-bridge - YouTube Music como Custom List de Lidarr
+  #     YTM no tiene API oficial y Lidarr no lo soporta, así que este
+  #     puente traduce: recomendaciones de YTM -> nombres -> MusicBrainz
+  #     IDs (vía el propio lookup de Lidarr) -> JSON.
+  #     Lidarr lo consume en http://ytm-bridge:8080/artists.json
+  #     8099 es solo para mirar /status desde el navegador.
+  #
+  #     OJO: sin 'build:' a propósito. La stack se despliega desde el editor
+  #     de Portainer, que no tiene contexto de build. Construye la imagen en
+  #     el host ANTES de desplegar, y otra vez cada vez que toques bridge.py:
+  #         docker build -t ytm-bridge:local ~/media-stack/ytm-bridge
+  # ---------------------------------------------------------------
+  ytm-bridge:
+    image: ytm-bridge:local
+    container_name: ytm-bridge
+    networks: [media]
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+      - LIDARR_URL=http://lidarr:8686
+      - LIDARR_API_KEY=${LIDARR_API_KEY:?falta LIDARR_API_KEY}
+      # home = el feed personalizado de YTM (lo que Spotify iba a cobrarte).
+      # Añade 'history' si quieres que cuente todo lo que reproduces.
+      - YTM_SOURCES=home,library,subscriptions,liked
+      - REFRESH_HOURS=12
+      # 1 req/s contra el metadata server de Lidarr: no hay prisa.
+      - LOOKUP_DELAY=1.0
+      # Solo coincidencia exacta de nombre; en false acepta el primer
+      # resultado difuso de Lidarr y mete basura en la biblioteca.
+      - STRICT_MATCH=true
+    volumes:
+      - ${APPDATA_DIR:-/opt/appdata}/ytm-bridge:/data
+    depends_on:
+      - lidarr
+    ports:
+      - 8099:8080
+    restart: unless-stopped
