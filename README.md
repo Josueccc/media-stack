@@ -18,7 +18,7 @@ with docker compose or Portainer.
 | Jellyseerr | Requests front-end |
 | Navidrome | Music streaming (Subsonic API) |
 | Mixarr | Music discovery (Spotify/TIDAL/Last.fm recommendations) |
-| **ytm-bridge** | Small FastAPI service in this repo: turns YouTube Music recommendations into a Lidarr Custom List via MusicBrainz lookups, with Google Takeout history as a fallback source |
+| **ytm-bridge** | Small Python (Flask) service in this repo: turns YouTube Music recommendations into a Lidarr Custom List via MusicBrainz lookups, with Google Takeout history as a fallback source |
 
 Everything mounts a single parent data directory so Sonarr/Radarr/Lidarr can
 **hardlink** finished downloads into the library instead of copying them.
